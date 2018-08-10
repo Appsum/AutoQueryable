@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using AutoQueryable.AspNetCore.Filter.FilterAttributes;
+using AutoQueryable.AspNetCore.Swagger;
 using AutoQueryable.Core.Enums;
 using AutoQueryable.Core.Models;
 using AutoQueryable.Extensions;
@@ -29,11 +30,19 @@ namespace AutoQueryable.Sample.EfCore.Controllers
         /// <example>http://localhost:5000/api/products?select=name&top=50&skip=10</example>
         /// <param name="context"></param>
         /// <returns></returns>
-        [TypeFilter(typeof(AutoQueryableAttribute))]
+        
+        [AutoQueryable]
         [HttpGet]
         public IQueryable Get([FromServices] AutoQueryableDbContext context)
         {
-            _profile.MaxToTake = 10;
+            return context.Product;
+        }
+        
+        
+        [AutoQueryable(DefaultToSelect = "name")]
+        [HttpGet("with_default")]
+        public IQueryable GetWithDefault([FromServices] AutoQueryableDbContext context)
+        {
             return context.Product;
         }
 
@@ -55,6 +64,20 @@ namespace AutoQueryable.Sample.EfCore.Controllers
                     Name = p.ProductCategory.Name
                 }
             });
+        }
+        
+        [HttpGet("swagger_without_aq_attr")]
+        [AutoQueryableSwagger]
+        public IQueryable GetSwaggerWithoutAqAttr([FromServices] AutoQueryableDbContext context)
+        {
+            return context.Product.Select(p => new ProductDto
+            {
+                Name = p.Name,
+                Category = new ProductCategoryDto
+                {
+                    Name = p.ProductCategory.Name
+                }
+            }).AutoQueryable(_autoQueryableContext);
         }
 
         /// <summary>
