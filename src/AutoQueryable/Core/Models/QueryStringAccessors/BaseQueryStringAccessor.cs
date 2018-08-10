@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace AutoQueryable.Core.Models.QueryStringAccessors
+namespace AutoQueryable.Core.Models
 {
     public abstract class BaseQueryStringAccessor : IQueryStringAccessor
     {

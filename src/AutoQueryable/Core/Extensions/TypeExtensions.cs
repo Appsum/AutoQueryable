@@ -132,11 +132,10 @@ namespace AutoQueryable.Core.Extensions
             {
                 columns = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                     .Where(p =>
-                    ((p.PropertyType.GetTypeInfo().IsGenericType && p.PropertyType.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>))
+                    (p.PropertyType.GetTypeInfo().IsGenericType && p.PropertyType.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>))
                     || (!p.PropertyType.GetTypeInfo().IsClass && !p.PropertyType.GetTypeInfo().IsGenericType)
                     || p.PropertyType.GetTypeInfo().IsArray
-                    || p.PropertyType == typeof(string))
-                    && p.GetIndexParameters().Length <= 0
+                    || p.PropertyType == typeof(string)
                     )
                     .Select(p => new SelectColumn(p.Name, p.Name, p.PropertyType));
             }

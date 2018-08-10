@@ -31,11 +31,6 @@ namespace AutoQueryable.Helpers
                 return Guid.Parse(value);
             }
 
-            if (Equals(type.GetTypeInfo(), typeof(decimal).GetTypeInfo()))
-            {
-                return decimal.Parse(value, CultureInfo.InvariantCulture);
-            }
-
             if (Equals(type.GetTypeInfo(), typeof(DateTime).GetTypeInfo()))
             {
                 if (formatProvider != null)

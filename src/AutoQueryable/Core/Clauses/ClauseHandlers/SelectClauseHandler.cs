@@ -21,14 +21,11 @@ namespace AutoQueryable.Core.Clauses
         {
             _profile = profile ?? throw new NullReferenceException("The profile has not been set on SelectClauseHandler");
             _baseType = type;
+
             if (string.IsNullOrEmpty(selectQueryStringPart))
             {
-                if (string.IsNullOrEmpty(profile.DefaultToSelect))
-                {
-                    return type.GetSelectableColumns(profile);
-                }
-
-                selectQueryStringPart = profile.DefaultToSelect;
+                
+                return type.GetSelectableColumns(profile);
             }
             _rawSelection = GetRawSelection(selectQueryStringPart);
             ParseBasePropertiesSelection();
@@ -76,7 +73,7 @@ namespace AutoQueryable.Core.Clauses
                     else
                     {
                         // pass non selectable & unselectable properties
-                        if (IsNotSelectableProperty(key) || IsUnselectableProperty(key) || IsAnIndexerProperty(property))
+                        if (IsNotSelectableProperty(key) || IsUnselectableProperty(key))
                             continue;
 
                         var column = new SelectColumn(columnName, key, property.PropertyType);
@@ -147,11 +144,6 @@ namespace AutoQueryable.Core.Clauses
         {
             return _profile?.SelectableProperties != null &&
                    !_profile.SelectableProperties.Contains(key, StringComparer.OrdinalIgnoreCase);
-        }
-
-        private bool IsAnIndexerProperty(PropertyInfo propertyInfo)
-        {
-            return propertyInfo.GetIndexParameters().Length > 0;
         }
 
         public bool CanIncludeAll(string key, int depth)
@@ -226,7 +218,7 @@ namespace AutoQueryable.Core.Clauses
                 var property = _baseType.GetTypeOrGenericType().GetProperties().FirstOrDefault(x =>
                     string.Equals(x.Name.ToLowerInvariant(), columnName.ToLowerInvariant(), StringComparison.Ordinal));
 
-                if (property == null || IsGreaterThanMaxDepth(property, 0) || IsAnIndexerProperty(property))
+                if (property == null || IsGreaterThanMaxDepth(property, 0))
                     continue;
 
                 var column = new SelectColumn(columnName, columnName, property.PropertyType);

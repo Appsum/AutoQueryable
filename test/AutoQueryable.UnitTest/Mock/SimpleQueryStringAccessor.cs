@@ -1,5 +1,4 @@
 ﻿using AutoQueryable.Core.Models;
-using AutoQueryable.Core.Models.QueryStringAccessors;
 
 namespace AutoQueryable.UnitTest.Mock
 {

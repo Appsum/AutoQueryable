@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using AutoQueryable.Core.Aliases;
 using AutoQueryable.Core.Clauses;
 using AutoQueryable.Core.CriteriaFilters;
 using AutoQueryable.Core.Models;
@@ -18,7 +16,7 @@ namespace AutoQueryable.Helpers
     {
         public static IQueryable<dynamic> TotalCountQuery { get; private set; }
 
-        public static dynamic Build<T>(IClauseValueManager clauseValueManager, ICriteriaFilterManager criteriaFilterManager, IQueryable<T> query, ICollection<Criteria> criterias, IAutoQueryableProfile profile) where T : class
+        public static IQueryable<dynamic> Build<T>(IClauseValueManager clauseValueManager, ICriteriaFilterManager criteriaFilterManager, IQueryable<T> query, ICollection<Criteria> criterias, IAutoQueryableProfile profile) where T : class
         {
             if (criterias != null && criterias.Any())
             {
@@ -29,13 +27,10 @@ namespace AutoQueryable.Helpers
             TotalCountQuery = query;
             if(clauseValueManager.First)
             {
-                return query.FirstOrDefault();
+                query = query.Take(1);
+            }else{
+                query = _handlePaging(clauseValueManager, query, profile);
             }
-            if(clauseValueManager.Last)
-            {
-                return query.LastOrDefault();
-            }
-            query = _handlePaging(clauseValueManager, query, profile);
             //if (profile?.MaxToTake != null)
             //{
             //    queryProjection = profile.UseBaseType ? ((IQueryable<T>)queryProjection).Take(profile.MaxToTake.Value) : queryProjection.Take(profile.MaxToTake.Value);
@@ -55,7 +50,7 @@ namespace AutoQueryable.Helpers
                 }
             }
 
-            return queryProjection.HandleWrapping(clauseValueManager);
+            return queryProjection;
         }
 
         private static IQueryable<T> _handlePaging<T>(IClauseValueManager clauseValueManager, IQueryable<T> query, IAutoQueryableProfile profile) where T : class
@@ -94,27 +89,6 @@ namespace AutoQueryable.Helpers
             }
 
             return query;
-        }
-        
-        public static dynamic HandleWrapping<TEntity>(this IQueryable<TEntity> query, IClauseValueManager clauseValueManager) where TEntity : class
-        {
-            if(!clauseValueManager.WrapWith.Any() || clauseValueManager.First)
-            {
-                return query;
-            }
-            var result = query;
-            
-            var wrapper = new ExpandoObject() as IDictionary<string, Object>;
-            wrapper.Add("result", result);
-            foreach (string wrapperPart in clauseValueManager.WrapWith)
-            {
-                if (wrapperPart == WrapperAlias.Count)
-                {
-                    wrapper.Add(WrapperAlias.Count, result.Count());
-                }
-            }
-
-            return wrapper;
         }
 
         private static Expression MakeLambda(Expression parameter, Expression predicate)

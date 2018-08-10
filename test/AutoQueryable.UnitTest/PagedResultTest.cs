@@ -1,12 +1,8 @@
-﻿using System.Linq;
-using AutoQueryable.Core.Clauses;
+﻿using AutoQueryable.Core.Clauses;
 using AutoQueryable.Core.Clauses.ClauseHandlers;
 using AutoQueryable.Core.CriteriaFilters;
 using AutoQueryable.Core.Models;
-using AutoQueryable.Extensions;
 using AutoQueryable.UnitTest.Mock;
-using Newtonsoft.Json;
-using Xunit;
 
 namespace AutoQueryable.UnitTest
 {
@@ -19,31 +15,27 @@ namespace AutoQueryable.UnitTest
 
         public PagedResultTest()
         {
-            var settings = new AutoQueryableSettings {DefaultToTake = 10};
-            _profile = new AutoQueryableProfile(settings);
+            _profile = new AutoQueryableProfile();
             _queryStringAccessor = new SimpleQueryStringAccessor();
             var selectClauseHandler = new DefaultSelectClauseHandler();
             var orderByClauseHandler = new DefaultOrderByClauseHandler();
             var wrapWithClauseHandler = new DefaultWrapWithClauseHandler();
             var clauseMapManager = new ClauseMapManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler);
-            var clauseValueManager = new ClauseValueManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler, _profile);
+            var clauseValueManager = new ClauseValueManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler);
             var criteriaFilterManager = new CriteriaFilterManager();
-            var defaultAutoQueryHandler = new AutoQueryHandler(_queryStringAccessor,criteriaFilterManager ,clauseMapManager ,clauseValueManager, _profile);
-            _autoQueryableContext = new AutoQueryableContext(defaultAutoQueryHandler);
+            var defaultAutoQueryHandler = new AutoQueryHandler(_queryStringAccessor,criteriaFilterManager ,clauseMapManager ,clauseValueManager);
+            _autoQueryableContext = new AutoQueryableContext(_profile, defaultAutoQueryHandler);
         }
 
-        [Fact]
-        public void CountAll()
-        {
-            using (var context = new AutoQueryableDbContext())
-            {
-                _queryStringAccessor.SetQueryString("wrapwith=count");
-
-                DataInitializer.InitializeSeed(context);
-                var query = context.Product.AutoQueryable(_autoQueryableContext)  as object;
-//                var t = JsonConvert.SerializeObject(query);
-            }
-        }
+        //[Fact]
+        //public void CountAll()
+        //{
+        //    using (var context = new AutoQueryableContext())
+        //    {
+        //        DataInitializer.InitializeSeed(context);
+        //        var query = context.Product.AutoQueryable("wrapwith=count") as object;
+        //    }
+        //}
 
         //[Fact]
         //public void WrapWithTotalCount()

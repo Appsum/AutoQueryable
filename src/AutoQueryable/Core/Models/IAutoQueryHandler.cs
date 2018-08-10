@@ -5,7 +5,7 @@ namespace AutoQueryable.Core.Models
 {
     public interface IAutoQueryHandler
     {
-        dynamic GetAutoQuery<T>(IQueryable<T> query) where T : class;
+        IQueryable<dynamic> GetAutoQuery<T>(IQueryable<T> query, IAutoQueryableProfile profile) where T : class;
         IClauseValueManager ClauseValueManager { get; }
         IQueryable<dynamic> TotalCountQuery { get; }
         string QueryString { get; }

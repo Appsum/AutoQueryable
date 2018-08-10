@@ -1,15 +1,20 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
+using Autofac;
 using AutoQueryable.Core.Clauses;
 using AutoQueryable.Core.Clauses.ClauseHandlers;
 using AutoQueryable.Core.CriteriaFilters;
 using AutoQueryable.Extensions;
 using AutoQueryable.Core.Models;
+using AutoQueryable.Helpers;
 using AutoQueryable.UnitTest.Mock;
 using AutoQueryable.UnitTest.Mock.Dtos;
 using AutoQueryable.UnitTest.Mock.Entities;
+using Moq;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace AutoQueryable.UnitTest
@@ -22,17 +27,16 @@ namespace AutoQueryable.UnitTest
 
         public SelectTest()
         {
-            var settings = new AutoQueryableSettings {DefaultToTake = 10};
-            _profile = new AutoQueryableProfile(settings);
+            _profile = new AutoQueryableProfile();
             _queryStringAccessor = new SimpleQueryStringAccessor();
             var selectClauseHandler = new DefaultSelectClauseHandler();
             var orderByClauseHandler = new DefaultOrderByClauseHandler();
             var wrapWithClauseHandler = new DefaultWrapWithClauseHandler();
             var clauseMapManager = new ClauseMapManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler);
-            var clauseValueManager = new ClauseValueManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler, _profile);
+            var clauseValueManager = new ClauseValueManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler);
             var criteriaFilterManager = new CriteriaFilterManager();
-            var defaultAutoQueryHandler = new AutoQueryHandler(_queryStringAccessor,criteriaFilterManager ,clauseMapManager ,clauseValueManager, _profile);
-            _autoQueryableContext = new AutoQueryableContext(defaultAutoQueryHandler);
+            var defaultAutoQueryHandler = new AutoQueryHandler(_queryStringAccessor,criteriaFilterManager ,clauseMapManager ,clauseValueManager);
+            _autoQueryableContext = new AutoQueryableContext(_profile, defaultAutoQueryHandler);
         }
         [Fact]
         public void SelectAllProducts()
@@ -42,7 +46,7 @@ namespace AutoQueryable.UnitTest
 
                 DataInitializer.InitializeSeed(context);
 
-                var query = context.Product.AutoQueryable(_autoQueryableContext) as IQueryable<object>;
+                var query = context.Product.AutoQueryable(_autoQueryableContext);
 
                 query.Count().Should().Be(DataInitializer.DefaultToTakeCount);
             }
@@ -352,7 +356,7 @@ namespace AutoQueryable.UnitTest
                 _queryStringAccessor.SetQueryString("select=ProductId,name,color&take=50");
 
                 DataInitializer.InitializeSeed(context);
-                var query = context.Product.AutoQueryable(_autoQueryableContext) as IQueryable<object>;
+                var query = context.Product.AutoQueryable(_autoQueryableContext);
 
                 query.Count().Should().Be(50);
             }
@@ -508,7 +512,7 @@ namespace AutoQueryable.UnitTest
                 _queryStringAccessor.SetQueryString("select=SellStartDate&orderby=SellStartDate");
 
                 DataInitializer.InitializeSeed(context);
-                var query = context.Product.AutoQueryable(_autoQueryableContext) as IQueryable<object>;
+                var query = context.Product.AutoQueryable(_autoQueryableContext).ToList();
                 var currentDate = DateTime.MinValue;
                 foreach (var product in query)
                 {
@@ -527,7 +531,7 @@ namespace AutoQueryable.UnitTest
                 _queryStringAccessor.SetQueryString("select=SellStartDate&orderby=-SellStartDate");
 
                 DataInitializer.InitializeSeed(context);
-                var query = context.Product.AutoQueryable(_autoQueryableContext) as IQueryable<object>;
+                var query = context.Product.AutoQueryable(_autoQueryableContext).ToList();
                 var currentDate = DateTime.MaxValue;
                 foreach (var product in query)
                 {
@@ -543,30 +547,30 @@ namespace AutoQueryable.UnitTest
         {
             using (var context = new AutoQueryableDbContext())
             {
-                _queryStringAccessor.SetQueryString("first=true");
+                _queryStringAccessor.SetQueryString("first=true&top=0");
 
                 DataInitializer.InitializeSeed(context);
-                var product = context.Product.AutoQueryable(_autoQueryableContext) as object;
+                var product = context.Product.AutoQueryable(_autoQueryableContext) as IQueryable<object>;
                 var properties = product.GetType().GetProperties();
                 properties.Should().Contain(p => p.Name == "ProductId");
                 ((int)properties.First(p => p.Name == "ProductId").GetValue(product)).Should().Be(1);
             }
         }
 
-        [Fact]
-        public void SelectLast()
-        {
-            using (AutoQueryableDbContext context = new AutoQueryableDbContext())
-            {
-                _queryStringAccessor.SetQueryString("last=true");
-                
-                DataInitializer.InitializeSeed(context);
-                var product = context.Product.AutoQueryable(_autoQueryableContext) as object;
-                var properties = product.GetType().GetProperties();
-                properties.Should().Contain(p => p.Name == "ProductId");
-                ((int)properties.First(p => p.Name == "ProductId").GetValue(product)).Should().Be(1000);
-            }
-        }
+        // TODO : Ef core 2 does not return single value anymore for last or default. See in next release.
+        //[Fact]
+        //public void SelectLast()
+        //{
+        //    using (AutoQueryableDbContext context = new AutoQueryableDbContext())
+        //    {
+        //        DataInitializer.InitializeSeed(context);
+        //        dynamic productLast = context.Product.AutoQueryable("last=true");
+        //        var product = productLast.FirstOrDefault() as Product;
+        //        PropertyInfo[] properties = product.GetType().GetProperties();
+
+        //        //Assert.IsTrue(properties.First(p => p.Name == "ProductId").GetValue(product) == DataInitializer.ProductSampleCount);
+        //    }
+        //}
 
 
 
@@ -578,9 +582,9 @@ namespace AutoQueryable.UnitTest
                 _queryStringAccessor.SetQueryString("first=true&orderby=-productid");
 
                 DataInitializer.InitializeSeed(context);
-                var product = context.Product.AutoQueryable(_autoQueryableContext) as object;
+                var product = context.Product.AutoQueryable(_autoQueryableContext) as IQueryable<object>;
 
-                var properties = product.GetType().GetProperties();
+                var properties = product.FirstOrDefault().GetType().GetProperties();
                 ((int)properties.First(p => p.Name == "ProductId").GetValue(product)).Should()
                     .Be(DataInitializer.ProductSampleCount);
             }
@@ -796,7 +800,7 @@ namespace AutoQueryable.UnitTest
                 _queryStringAccessor.SetQueryString("select=name,productextension.name&top=0");
 
                 DataInitializer.InitializeSeed(context);
-                var query = context.Product.AutoQueryable(_autoQueryableContext) as IQueryable<object>;
+                var query = context.Product.AutoQueryable(_autoQueryableContext);
                 query?.Count().Should().Be(DataInitializer.ProductSampleCount);
             }
         }
@@ -926,57 +930,6 @@ namespace AutoQueryable.UnitTest
                 //pagedResult.RowCount.Should().Be(_profile.DefaultToTake);
                 //pagedResult.TotalCount.Should().Be(await context.Product.CountAsync());
                 //pagedResult.Result.Count.Should().Be(_profile.DefaultToTake);
-                
-            }
-        }
-        
-        [Fact]
-        public async Task DefaultToSelectAllTest()
-        {
-            using (var context = new AutoQueryableDbContext())
-            {
-                _queryStringAccessor.SetQueryString("");
-                _profile.DefaultToSelect = "*";
-
-                DataInitializer.InitializeSeed(context);
-                var query = context.Product.AutoQueryable(_autoQueryableContext) as IQueryable<object>;
-                var properties = query.First().GetType().GetProperties();
-
-                properties.Length.Should().Be(21);
-                
-            }
-        }
-        
-        [Fact]
-        public async Task DefaultToSelectBaseTest()
-        {
-            using (var context = new AutoQueryableDbContext())
-            {
-                _queryStringAccessor.SetQueryString("nameContains=Product 1");
-                _profile.DefaultToSelect = "_";
-
-                DataInitializer.InitializeSeed(context);
-                var query = context.Product.AutoQueryable(_autoQueryableContext) as IQueryable<object>;
-                var properties = query.First().GetType().GetProperties();
-
-                properties.Length.Should().Be(17);
-                
-            }
-        }
-        
-        [Fact]
-        public async Task DefaultToSelectTest()
-        {
-            using (var context = new AutoQueryableDbContext())
-            {
-                _queryStringAccessor.SetQueryString("nameContains=Product 1");
-                _profile.DefaultToSelect = "productId,name";
-
-                DataInitializer.InitializeSeed(context);
-                var query = context.Product.AutoQueryable(_autoQueryableContext) as IQueryable<object>;
-                var properties = query.First().GetType().GetProperties();
-
-                properties.Length.Should().Be(2);
                 
             }
         }

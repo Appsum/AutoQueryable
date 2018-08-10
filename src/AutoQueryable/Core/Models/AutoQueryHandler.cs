@@ -18,22 +18,20 @@ namespace AutoQueryable.Core.Models
         private readonly ICriteriaFilterManager _criteriaFilterManager;
         private readonly IClauseMapManager _clauseMapManager;
         private readonly IClauseValueManager _clauseValueManager;
-        private readonly IAutoQueryableProfile _profile;
         public IClauseValueManager ClauseValueManager { get; private set; }
         public IQueryable<dynamic> TotalCountQuery { get; private set; }
         public string QueryString { get; private set; }
 
 
-        public AutoQueryHandler(IQueryStringAccessor queryStringAccessor, ICriteriaFilterManager criteriaFilterManager, IClauseMapManager clauseMapManager, IClauseValueManager clauseValueManager, IAutoQueryableProfile profile)
+        public AutoQueryHandler(IQueryStringAccessor queryStringAccessor, ICriteriaFilterManager criteriaFilterManager, IClauseMapManager clauseMapManager, IClauseValueManager clauseValueManager)
         {
             _queryStringAccessor = queryStringAccessor;
             _criteriaFilterManager = criteriaFilterManager;
             _clauseMapManager = clauseMapManager;
             _clauseValueManager = clauseValueManager;
-            _profile = profile;
         }
 
-        public dynamic GetAutoQuery<T>(IQueryable<T> query) where T : class
+        public IQueryable<dynamic> GetAutoQuery<T>(IQueryable<T> query, IAutoQueryableProfile profile) where T : class
         {
             QueryString = _queryStringAccessor.QueryString;
             ClauseValueManager = _clauseValueManager;
@@ -43,15 +41,14 @@ namespace AutoQueryable.Core.Models
             // No query string, get only selectable columns
             if (string.IsNullOrEmpty(QueryString))
             {
-                _clauseValueManager.SetDefaults(typeof(T));
                 TotalCountQuery = query;
-                return GetDefaultSelectableQuery(query);
+                return GetDefaultSelectableQuery(query, profile);
             }
 
-            _getClauses<T>(_profile);
-            var criterias = _profile.IsClauseAllowed(ClauseType.Filter) ? GetCriterias<T>().ToList() : null;
+            _getClauses<T>(profile);
+            var criterias = profile.IsClauseAllowed(ClauseType.Filter) ? GetCriterias<T>().ToList() : null;
             
-            var queryResult = QueryBuilder.Build(ClauseValueManager, _criteriaFilterManager, query, criterias, _profile);
+            var queryResult = QueryBuilder.Build(ClauseValueManager, _criteriaFilterManager, query, criterias, profile);
 
             TotalCountQuery = QueryBuilder.TotalCountQuery;
  
@@ -59,6 +56,8 @@ namespace AutoQueryable.Core.Models
         }
         private void _getClauses<T>(IAutoQueryableProfile profile) where T : class
         {
+            // Set the defaults to start with, then fill/overwrite with the query string values
+            ClauseValueManager.SetDefaults(typeof(T), profile);
             //var clauses = new List<Clause>();
             foreach (var q in _queryStringAccessor.QueryStringParts.Where(q => !q.IsHandled))
             {
@@ -77,8 +76,6 @@ namespace AutoQueryable.Core.Models
                     //clauses.Add(new Clause(clauseQueryFilter.ClauseType, value, clauseQueryFilter.ValueType));
                 }
             }
-            // Set the defaults to start with, then fill/overwrite with the query string values
-            ClauseValueManager.SetDefaults(typeof(T));
 
             if (ClauseValueManager.PageSize != null)
             {
@@ -171,22 +168,23 @@ namespace AutoQueryable.Core.Models
             return criteria;
         }
 
-        private IQueryable<dynamic> GetDefaultSelectableQuery<T>(IQueryable<T> query) where T : class
+        private static IQueryable<dynamic> GetDefaultSelectableQuery<T>(IQueryable<T> query, IAutoQueryableProfile profile) where T : class
         {
-            var selectColumns = _clauseValueManager.Select;
-            query = query.Take(_profile.DefaultToTake);
+            var selectColumns = typeof(T).GetSelectableColumns(profile);
 
-            if (_profile.MaxToTake.HasValue)
+            query = query.Take(profile.DefaultToTake);
+
+            if (profile.MaxToTake.HasValue)
             {
-                query = query.Take(_profile.MaxToTake.Value);
+                query = query.Take(profile.MaxToTake.Value);
             }
 
-            if(_profile.ToListBeforeSelect)
+            if(profile.ToListBeforeSelect)
             {
                 query = query.ToList().AsQueryable();
             }
 
-            return _profile.UseBaseType ? query.Select(SelectHelper.GetSelector<T, T>(selectColumns, _profile)) : query.Select(SelectHelper.GetSelector<T, object>(selectColumns, _profile));
+            return profile.UseBaseType ? query.Select(SelectHelper.GetSelector<T, T>(selectColumns, profile)) : query.Select(SelectHelper.GetSelector<T, object>(selectColumns, profile));
         }
     }
 }

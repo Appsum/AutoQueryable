@@ -21,17 +21,16 @@ namespace AutoQueryable.UnitTest
 
         public AutoQueryableProfileTest()
         {
-            var settings = new AutoQueryableSettings {DefaultToTake = 10};
-            _profile = new AutoQueryableProfile(settings);
+            _profile = new AutoQueryableProfile();
             _queryStringAccessor = new SimpleQueryStringAccessor();
             var selectClauseHandler = new DefaultSelectClauseHandler();
             var orderByClauseHandler = new DefaultOrderByClauseHandler();
             var wrapWithClauseHandler = new DefaultWrapWithClauseHandler();
             var clauseMapManager = new ClauseMapManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler);
-            var clauseValueManager = new ClauseValueManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler, _profile);
+            var clauseValueManager = new ClauseValueManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler);
             var criteriaFilterManager = new CriteriaFilterManager();
-            var defaultAutoQueryHandler = new AutoQueryHandler(_queryStringAccessor,criteriaFilterManager ,clauseMapManager ,clauseValueManager, _profile);
-            _autoQueryableContext = new AutoQueryableContext(defaultAutoQueryHandler);
+            var defaultAutoQueryHandler = new AutoQueryHandler(_queryStringAccessor,criteriaFilterManager ,clauseMapManager ,clauseValueManager);
+            _autoQueryableContext = new AutoQueryableContext(_profile, defaultAutoQueryHandler);
         }
 
         [Fact]
@@ -40,7 +39,7 @@ namespace AutoQueryable.UnitTest
             using (var context = new AutoQueryableDbContext())
             {
                 DataInitializer.InitializeSeed(context);
-                _queryStringAccessor.SetQueryString("select=productId");
+                _queryStringAccessor.SetQueryString("select=id");
 
                 _profile.AllowedClauses = ClauseType.Select;
 
@@ -53,7 +52,7 @@ namespace AutoQueryable.UnitTest
                 var propertiesCount = first.GetType().GetProperties().Length;
                 propertiesCount.Should().Be(1);
 
-                var name = first.GetType().GetProperty("productId").GetValue(first);
+                var name = first.GetType().GetProperty("id").GetValue(first);
                 name.Should().NotBeNull();
             }
         }

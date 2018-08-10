@@ -1,6 +1,4 @@
-﻿using System;
-using Autofac;
-using AutoQueryable.AspNet;
+﻿using Autofac;
 using AutoQueryable.Core.Clauses;
 using AutoQueryable.Core.Clauses.ClauseHandlers;
 using AutoQueryable.Core.CriteriaFilters;
@@ -10,12 +8,9 @@ namespace AutoQueryable.Extensions.Autofac
 {
     public static class AspNetAutofacRegistration
     {
-        public static void RegisterAutoQueryable(this ContainerBuilder builder, Action<AutoQueryableSettings> handler = null)
+        public static void RegisterAutoQueryable(this ContainerBuilder builder)
         {
-            var settings = new AutoQueryableSettings();
-            handler?.Invoke(settings);
             builder.RegisterType<AutoQueryableContext>().AsImplementedInterfaces().InstancePerLifetimeScope();
-            builder.Register(c => settings).As<AutoQueryableSettings>().SingleInstance();
             builder.RegisterType<AutoQueryableProfile>().AsImplementedInterfaces().InstancePerLifetimeScope();
             builder.RegisterType<AutoQueryHandler>().AsImplementedInterfaces().InstancePerLifetimeScope();
             builder.RegisterType<ClauseValueManager>().AsImplementedInterfaces().InstancePerLifetimeScope();
@@ -24,7 +19,6 @@ namespace AutoQueryable.Extensions.Autofac
             builder.RegisterType<DefaultSelectClauseHandler>().AsImplementedInterfaces().InstancePerLifetimeScope();
             builder.RegisterType<DefaultOrderByClauseHandler>().AsImplementedInterfaces().InstancePerLifetimeScope();
             builder.RegisterType<DefaultWrapWithClauseHandler>().AsImplementedInterfaces().InstancePerLifetimeScope();
-            builder.RegisterType<AspNetQueryStringAccessor>().As<IQueryStringAccessor>().InstancePerLifetimeScope();
         }
     }
 

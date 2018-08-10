@@ -21,17 +21,19 @@ namespace AutoQueryable.UnitTest
 
         public FilterTest()
         {
-            var settings = new AutoQueryableSettings();
-            _profile = new AutoQueryableProfile(settings);
+            _profile = new AutoQueryableProfile();
+
+            _profile.DefaultToTake = 0;
+
             _queryStringAccessor = new SimpleQueryStringAccessor();
             var selectClauseHandler = new DefaultSelectClauseHandler();
             var orderByClauseHandler = new DefaultOrderByClauseHandler();
             var wrapWithClauseHandler = new DefaultWrapWithClauseHandler();
             var clauseMapManager = new ClauseMapManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler);
-            var clauseValueManager = new ClauseValueManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler, _profile);
+            var clauseValueManager = new ClauseValueManager(selectClauseHandler, orderByClauseHandler, wrapWithClauseHandler);
             var criteriaFilterManager = new CriteriaFilterManager();
-            var defaultAutoQueryHandler = new AutoQueryHandler(_queryStringAccessor,criteriaFilterManager ,clauseMapManager ,clauseValueManager, _profile);
-            _autoQueryableContext = new AutoQueryableContext(defaultAutoQueryHandler);
+            var defaultAutoQueryHandler = new AutoQueryHandler(_queryStringAccessor,criteriaFilterManager ,clauseMapManager ,clauseValueManager);
+            _autoQueryableContext = new AutoQueryableContext(_profile, defaultAutoQueryHandler);
         }
         [Fact]
         public void IdEquals5()
@@ -475,20 +477,6 @@ namespace AutoQueryable.UnitTest
                 var query = context.Product.AutoQueryable(_autoQueryableContext)  as IQueryable<object>;
 
                 query.Count().Should().Be(0);
-            }
-        }
-        
-        [Fact]
-        public void FilterWithDecimalPoints_Query_ResultsCountShouldBeOne()
-        {
-            using (var context = new AutoQueryableDbContext())
-            {
-                _queryStringAccessor.SetQueryString("ListPrice=1.6");
-
-                DataInitializer.InitializeSeed(context);
-                var query = context.Product.AutoQueryable(_autoQueryableContext)  as IQueryable<object>;
-
-                query.Count().Should().Be(1);
             }
         }
     }

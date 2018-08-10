@@ -13,7 +13,7 @@ namespace AutoQueryable.AspNetCore.Swagger
         {
             // Policy names map to scopes
             var controllerScopes = context.ApiDescription.ActionAttributes()
-                .OfType<IAutoQueryableAttribute>();
+                .OfType<AutoQueryableAttribute>();
 
             if (controllerScopes.Any())
             {
